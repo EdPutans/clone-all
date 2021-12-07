@@ -5,7 +5,7 @@
   "type": "module",
   "main": "clone-all.js",
   "scripts": {
-    "run": "node clone-all.js",
+    "clone": "node clone-all.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
