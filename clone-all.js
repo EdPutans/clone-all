@@ -1,94 +1,96 @@
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
 import { exit } from 'process';
-import  readline  from 'readline';
+import readline from 'readline';
+
+const io = readline.createInterface({ input: process.stdin, output: process.stdout });
 
 const userNames = [
-    // hehe nope.
-    // copy the names over from the spreadsheet...
-    "3mper0r",
-    "artioladomicaka",
-    "visard123",
-    "adrianorama",
-    "denis-projects",
-    "nilsondyrmishi",
-    "marselsotiri",
-    "agnesas",
-    "egon92",
-    "gr3g03",
-    "desintila",
-    "endiymeri",
-    "marvinroot",
-    "besim10",
-    "ilir2523",
-    "ramarinor",
-    "aritaosmani",
-    "Avenger22",
-    "geri1997"
+  // hehe nope.
+  // copy the github usernames over from the spreadsheet here.
+  // just make a list of strings 
 ];
 
 const cleanFolder = (repoName, userName) => execSync(`cd ${repoName} && \
 rm -rf ${userName} && \
 mkdir ${userName}`);
 
-const io = readline.createInterface({ input: process.stdin, output: process.stdout });
-
 const erroredUsernames = [];
 
 const cloneForAll = (repoName, shouldInstall, shouldOverrideExistingFolders) => {
-    if(!existsSync(repoName)){
-        execSync(`mkdir ${repoName}`);
-        console.log('Folder created');
-    }
+  // if folder doesn't exist, create it
+  if (!existsSync(repoName)) {
+    execSync(`mkdir ${repoName}`);
+    console.log('Folder created');
+  }
 
-     userNames.forEach( (userName) => {
-        const localPath = `${repoName}/${userName}`;
+  // loop over every person
+  userNames.forEach((userName) => {
+    const localPath = `${repoName}/${userName}`;
 
-        try {
-            if(existsSync(localPath)) {
-                if(shouldOverrideExistingFolders) {
-                    cleanFolder(repoName, userName);
-                } else {
-                    console.log(`${userName} already cloned. Skipping...`);
-                    return;
-                }
-            }
-
-            return execSync(`
-                cd ${repoName} && \
-                git clone git@github.com:${userName}/${repoName}.git ${userName} \
-                ${shouldInstall ? `&& cd ${userName} && npm install` : ''}
-            `);
-        } catch {
-            execSync(`cd ${repoName} && rm -rf ${repoName}`);
-            erroredUsernames.push(userName);
+    try {
+      // if shouldOverrideExistingFolders is true, delete the folder and create a new one
+      if (existsSync(localPath)) {
+        if (shouldOverrideExistingFolders) {
+          console.log(`Cleaning ${localPath}...`);
+          cleanFolder(repoName, userName);
+          // skip otherwise
+        } else {
+          console.log(`${userName} already cloned. Skipping...`);
+          return;
         }
-    });
+      }
 
-    return true;
+      // clone the repo
+      return execSync(`
+            cd ${repoName} && \
+            git clone git@github.com:${userName}/${repoName}.git ${userName} \
+            ${shouldInstall ? `&& cd ${userName} && npm install` : ''}
+        `);
+    } catch {
+      execSync(`cd ${repoName} && rm -rf ${repoName}`);
+      // add to errored usernames if wasn't able to clone
+      erroredUsernames.push(userName);
+    }
+  });
+
+  return true;
 }
 
- await io.question('Repo name: ', async (repoName) => {
-     await io.question('Should override existing folders? (y/n): ', async (overrideExisting) => {
-        const shouldOverrideExistingFolders = overrideExisting === 'y' || overrideExisting === 'yes' || overrideExisting === 'Y' || overrideExisting === 'Yes';
+// main
+const init = async () => {
+  // ask for repo name
+  await io.question('Repo name: ', async (repoName) => {
+    // ask for whether to override the existing clones
+    await io.question('Should override existing folders? (y/n): ', async (overrideExisting) => {
+      const shouldOverrideExistingFolders = overrideExisting === 'y' || overrideExisting === 'yes' || overrideExisting === 'Y' || overrideExisting === 'Yes';
 
-        await io.question('Run npm install? [y/n] ', async runInstall => {
-            const shouldInstall = runInstall === 'y' || runInstall === 'yes' || runInstall === 'Y' || runInstall === 'Yes';
+      // ask for whether to run NPM INSTALL on each project
+      await io.question('Run npm install? [y/n] ', async runInstall => {
+        const shouldInstall = runInstall === 'y' || runInstall === 'yes' || runInstall === 'Y' || runInstall === 'Yes';
 
-            cloneForAll(repoName, shouldInstall, shouldOverrideExistingFolders);
+        // clone everybody's repos
+        cloneForAll(repoName, shouldInstall, shouldOverrideExistingFolders);
 
-            if(erroredUsernames.length){
-                console.error(`Couldn't fetch the repo for ${erroredUsernames.join(', ')}. Clearing folders...`);
-                erroredUsernames.forEach(userName => {
-                   execSync(`cd ${repoName} && rm -rf ${userName}`);
-                })
-                exit(1);
-            } else {
-                console.info(`No way, everybody submitted today!`);
-                exit(0)
-            }
-        });
-     })
- });
+        // if there were any errors, print them
+        if (erroredUsernames.length) {
+          console.error(`Couldn't fetch the repo for ${erroredUsernames.join(', ')}. Removing their empty folders...`);
 
+          erroredUsernames.forEach(userName => {
+            // remove the empty folders
+            execSync(`cd ${repoName} && rm -rf ${userName}`);
+          })
+          exit(1);
 
+        } else {
+          // surprise - surprise, everybody submitted their work!
+          console.info(`No way, everybody submitted today!`);
+          exit(0)
+        }
+      });
+    })
+  });
+}
+
+// run me
+init();
