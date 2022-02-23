@@ -2,25 +2,21 @@ import { execSync } from 'child_process';
 import { existsSync } from 'fs';
 import { exit, stdin, stdout } from 'process';
 import readline from 'readline';
+import userNames from './people.js';
 
 const io = readline.createInterface({ input: stdin, output: stdout });
 
-const truthyUserInput = ['y', 'yes', 'Y', 'Yes'];
-
-const userNames = [
-  // hehe nope.
-  // copy the github usernames over from the spreadsheet here.
-  // just make a list of strings 
-];
+const trueAnswers = ['y', 'yes', 'Y', 'Yes'];
 
 const cleanFolder = (repoName, userName) => execSync(`cd ${repoName} && rm -rf ${userName} && mkdir ${userName}`);
 
 
-// returms an object with the errored usernames.
-const cloneForAll = async (repoName, shouldInstall, shouldOverrideExistingFolders) => {
+const cloneForAll = async (repoName, shouldInstall, shouldPullInExistingFolders) => {
   // if folder doesn't exist, create it
-  if (!existsSync(repoName)) execSync(`mkdir ${repoName}`);
-  
+  if (!existsSync(repoName)) {
+    execSync(`mkdir ${repoName}`);
+    console.log('Folder created');
+  }
 
   const erroredUsernames = [];
 
@@ -29,13 +25,15 @@ const cloneForAll = async (repoName, shouldInstall, shouldOverrideExistingFolder
     const localPath = `${repoName}/${userName}`;
 
     try {
-      // if shouldOverrideExistingFolders is true, delete the folder and create a new one
+      // if shouldPullInExistingFolders is true, delete the folder and create a new one
       if (existsSync(localPath)) {
-        if (shouldOverrideExistingFolders) {
-          console.log(`Cleaning ${localPath}...`);
-          cleanFolder(repoName, userName);
-        } else {
+        if (shouldPullInExistingFolders) {
+
+          execSync(`cd ${repoName}/${userName} && git pull`)
+          // console.log(`Cleaning ${localPath}...`);
+          // cleanFolder(repoName, userName);
           // skip otherwise
+        } else {
           console.log(`${userName} already cloned. Skipping...`);
           return;
         }
@@ -61,15 +59,15 @@ const init = async () => {
   // ask for repo name
   await io.question('Repo name: ', async (repoName) => {
     // ask for whether to override the existing clones
-    await io.question('Should override existing folders? (y/n): ', async (overrideExisting) => {
-      const shouldOverrideExistingFolders = truthyUserInput.includes(overrideExisting);
+    await io.question('Should pull in existing folders? (y/n): ', async (pullInExisting) => {
+      const shouldPullInExistingFolders = trueAnswers.includes(pullInExisting);
 
       // ask for whether to run NPM INSTALL on each project
       await io.question('Run npm install in each project? [y/n] ', async runInstall => {
-        const shouldInstall = truthyUserInput.includes(runInstall);
+        const shouldInstall = runInstall === 'y' || runInstall === 'yes' || runInstall === 'Y' || runInstall === 'Yes';
 
-        // clone everybody's repos and get the errored names
-        const { erroredUsernames } = await cloneForAll(repoName, shouldInstall, shouldOverrideExistingFolders);
+        // clone everybody's repos
+        const { erroredUsernames } = await cloneForAll(repoName, shouldInstall, shouldPullInExistingFolders);
 
         // if there were any errors, print them
         if (erroredUsernames.length) {
@@ -91,5 +89,5 @@ const init = async () => {
   });
 }
 
-// so run me baby
+// run me
 init();

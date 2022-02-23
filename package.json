@@ -5,7 +5,8 @@
   "type": "module",
   "main": "clone-all.js",
   "scripts": {
-    "clone": "node clone-all.js",
+    "all": "npx ts-node clone-all.js",
+    "one": "npx ts-node clone-single.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

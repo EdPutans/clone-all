@@ -1,8 +1,10 @@
 # Ignore everything
 *
+people.js
 
 # But not these files...
 !clone-all.js
+!clone-single.js
 !package-lock.json
 !package.json
 !.gitignore
